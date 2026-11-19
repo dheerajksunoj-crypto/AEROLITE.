@@ -1,0 +1,52 @@
+name: Build AEROLITE APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Find project folder
+        run: |
+          if [ -f settings.gradle.kts ]; then
+            echo "PROJECT_DIR=." >> $GITHUB_ENV
+          elif [ -f AEROLITE/settings.gradle.kts ]; then
+            echo "PROJECT_DIR=AEROLITE" >> $GITHUB_ENV
+          else
+            echo "Android project not found"
+            exit 1
+          fi
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.5
+
+      - name: Build APK
+        run: gradle -p "$PROJECT_DIR" assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AEROLITE-APK
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/*.apk
